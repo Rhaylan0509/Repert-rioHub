@@ -1,0 +1,6 @@
+{
+  "name": "Repertório Archive — Acervo Sociocultural",
+  "description": "Sistema curatorial limpo e moderno para organizar, pesquisar e catalogar repertórios socioculturais, obras literárias, filosóficas, históricas e artísticas por autor, eixo temático, tipo de obra e conexões críticas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

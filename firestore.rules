@@ -1,0 +1,264 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net: Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidOptionalString(data, field, maxLen) {
+      return !(field in data) || (data[field] is string && data[field].size() <= maxLen);
+    }
+
+    function isValidOptionalBool(data, field) {
+      return !(field in data) || (data[field] is bool);
+    }
+
+    function isValidTags(tags) {
+      return tags is list &&
+        tags.size() <= 15 &&
+        (tags.size() == 0 || (tags[0] is string && tags[0].size() >= 1 && tags[0].size() <= 50));
+    }
+
+    function isValidOptionalEditors(data) {
+      return !('allowedEditors' in data) || (
+        data.allowedEditors is list &&
+        data.allowedEditors.size() <= 15 &&
+        (data.allowedEditors.size() == 0 || isValidId(data.allowedEditors[0]))
+      );
+    }
+
+    function isValidRepertorio(data) {
+      return data.keys().hasAll([
+          'ownerId',
+          'nome',
+          'titulo',
+          'autor',
+          'eixoTematico',
+          'tipoObra',
+          'resumo',
+          'tags',
+          'favorito',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'ownerId',
+          'ownerName',
+          'isPublic',
+          'allowedEditors',
+          'nome',
+          'titulo',
+          'autor',
+          'eixoTematico',
+          'tipoObra',
+          'ano',
+          'citacaoChave',
+          'resumo',
+          'criticas',
+          'conexaoTemas',
+          'exemploParagrafo',
+          'tags',
+          'imagemData',
+          'favorito',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        isValidId(data.ownerId) &&
+        isValidOptionalString(data, 'ownerName', 120) &&
+        isValidOptionalBool(data, 'isPublic') &&
+        isValidOptionalEditors(data) &&
+        data.nome is string && data.nome.size() >= 1 && data.nome.size() <= 160 &&
+        data.titulo is string && data.titulo.size() >= 1 && data.titulo.size() <= 200 &&
+        data.autor is string && data.autor.size() >= 1 && data.autor.size() <= 140 &&
+        data.eixoTematico is string && data.eixoTematico.size() >= 1 && data.eixoTematico.size() <= 80 &&
+        data.tipoObra is string && data.tipoObra.size() >= 1 && data.tipoObra.size() <= 80 &&
+        data.resumo is string && data.resumo.size() >= 1 && data.resumo.size() <= 5000 &&
+        isValidOptionalString(data, 'ano', 30) &&
+        isValidOptionalString(data, 'citacaoChave', 600) &&
+        isValidOptionalString(data, 'criticas', 5000) &&
+        isValidOptionalString(data, 'conexaoTemas', 5000) &&
+        isValidOptionalString(data, 'exemploParagrafo', 5000) &&
+        isValidOptionalString(data, 'imagemData', 450000) &&
+        isValidTags(data.tags) &&
+        data.favorito is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidEditRequest(data) {
+      return data.keys().hasAll([
+          'repertorioId',
+          'repertorioNome',
+          'ownerId',
+          'requesterId',
+          'requesterName',
+          'status',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'repertorioId',
+          'repertorioNome',
+          'ownerId',
+          'requesterId',
+          'requesterName',
+          'status',
+          'message',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        isValidId(data.repertorioId) &&
+        data.repertorioNome is string && data.repertorioNome.size() >= 1 && data.repertorioNome.size() <= 160 &&
+        isValidId(data.ownerId) &&
+        isValidId(data.requesterId) &&
+        data.ownerId != data.requesterId &&
+        data.requesterName is string && data.requesterName.size() >= 1 && data.requesterName.size() <= 120 &&
+        data.status in ['pending', 'accepted', 'rejected'] &&
+        isValidOptionalString(data, 'message', 300) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    match /repertorios/{repertorioId} {
+      allow get: if isSignedIn() && isValidId(repertorioId) && (
+        existing().ownerId == request.auth.uid ||
+        ('isPublic' in existing() && existing().isPublic == true) ||
+        ('allowedEditors' in existing() && request.auth.uid in existing().allowedEditors)
+      );
+
+      allow list: if isSignedIn() && (
+        existing().ownerId == request.auth.uid ||
+        ('isPublic' in existing() && existing().isPublic == true) ||
+        ('allowedEditors' in existing() && request.auth.uid in existing().allowedEditors)
+      );
+
+      allow create: if isVerified() &&
+        isValidId(repertorioId) &&
+        isValidRepertorio(incoming()) &&
+        incoming().ownerId == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+
+      allow update: if isVerified() &&
+        isValidId(repertorioId) &&
+        isValidRepertorio(incoming()) &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          // Tier 1: Owner Actions
+          (
+            existing().ownerId == request.auth.uid && (
+              // Action 1A: Owner Toggles Favorite or Visibility or Editors
+              incoming().diff(existing()).affectedKeys().hasOnly(['favorito', 'isPublic', 'allowedEditors', 'updatedAt']) ||
+              // Action 1B: Owner Full Content & Settings Edit
+              incoming().diff(existing()).affectedKeys().hasOnly([
+                'ownerName',
+                'isPublic',
+                'allowedEditors',
+                'nome',
+                'titulo',
+                'autor',
+                'eixoTematico',
+                'tipoObra',
+                'ano',
+                'citacaoChave',
+                'resumo',
+                'criticas',
+                'conexaoTemas',
+                'exemploParagrafo',
+                'tags',
+                'imagemData',
+                'favorito',
+                'updatedAt'
+              ])
+            )
+          ) ||
+          // Tier 2: Approved Collaborator Content Edit (cannot change visibility, owner, or allowedEditors)
+          (
+            ('allowedEditors' in existing() && request.auth.uid in existing().allowedEditors) &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'nome',
+              'titulo',
+              'autor',
+              'eixoTematico',
+              'tipoObra',
+              'ano',
+              'citacaoChave',
+              'resumo',
+              'criticas',
+              'conexaoTemas',
+              'exemploParagrafo',
+              'tags',
+              'updatedAt'
+            ])
+          )
+        );
+
+      allow delete: if isVerified() &&
+        isValidId(repertorioId) &&
+        existing().ownerId == request.auth.uid;
+    }
+
+    match /editRequests/{requestId} {
+      allow get: if isSignedIn() && isValidId(requestId) && (
+        existing().ownerId == request.auth.uid ||
+        existing().requesterId == request.auth.uid
+      );
+
+      allow list: if isSignedIn() && (
+        existing().ownerId == request.auth.uid ||
+        existing().requesterId == request.auth.uid
+      );
+
+      allow create: if isVerified() &&
+        isValidId(requestId) &&
+        isValidEditRequest(incoming()) &&
+        incoming().requesterId == request.auth.uid &&
+        incoming().status == 'pending' &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/repertorios/$(incoming().repertorioId)) &&
+        get(/databases/$(database)/documents/repertorios/$(incoming().repertorioId)).data.ownerId == incoming().ownerId;
+
+      allow update: if isVerified() &&
+        isValidId(requestId) &&
+        isValidEditRequest(incoming()) &&
+        existing().ownerId == request.auth.uid &&
+        existing().status == 'pending' &&
+        incoming().status in ['accepted', 'rejected'] &&
+        incoming().repertorioId == existing().repertorioId &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().requesterId == existing().requesterId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']);
+
+      allow delete: if isVerified() &&
+        isValidId(requestId) &&
+        (existing().ownerId == request.auth.uid || existing().requesterId == request.auth.uid);
+    }
+  }
+}

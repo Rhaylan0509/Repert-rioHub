@@ -1,0 +1,222 @@
+{
+  "entities": {
+    "Repertorio": {
+      "title": "Repertorio",
+      "description": "Ficha curatorial de um repertório sociocultural, literário, filosófico ou artístico, com suporte a compartilhamento público e colaboradores de edição.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "UID do usuário proprietário do repertório.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerName": {
+          "type": "string",
+          "description": "Nome público de exibição do criador do repertório.",
+          "minLength": 0,
+          "maxLength": 120
+        },
+        "isPublic": {
+          "type": "boolean",
+          "description": "Define se o repertório está compartilhado globalmente para leitura."
+        },
+        "allowedEditors": {
+          "type": "array",
+          "description": "Lista de UIDs de usuários autorizados pelo proprietário a editar este repertório (máx 15).",
+          "maxLength": 15
+        },
+        "nome": {
+          "type": "string",
+          "description": "Nome do repertório ou conceito central.",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "titulo": {
+          "type": "string",
+          "description": "Título da obra de referência.",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "autor": {
+          "type": "string",
+          "description": "Autor, pensador, diretor ou criador da obra.",
+          "minLength": 1,
+          "maxLength": 140
+        },
+        "eixoTematico": {
+          "type": "string",
+          "description": "Eixo temático principal ao qual o repertório pertence.",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "tipoObra": {
+          "type": "string",
+          "description": "Classificação do formato ou natureza da obra.",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "ano": {
+          "type": "string",
+          "description": "Ano ou período histórico de publicação/criação.",
+          "minLength": 0,
+          "maxLength": 30
+        },
+        "citacaoChave": {
+          "type": "string",
+          "description": "Citação direta ou frase síntese para uso rápido.",
+          "minLength": 0,
+          "maxLength": 600
+        },
+        "resumo": {
+          "type": "string",
+          "description": "Resumo estruturado da obra e de suas ideias centrais.",
+          "minLength": 1,
+          "maxLength": 5000
+        },
+        "criticas": {
+          "type": "string",
+          "description": "Análise crítica, interpretações e relevância filosófica ou social.",
+          "minLength": 0,
+          "maxLength": 5000
+        },
+        "conexaoTemas": {
+          "type": "string",
+          "description": "Explicação prática de como conectar este repertório a diferentes temas.",
+          "minLength": 0,
+          "maxLength": 5000
+        },
+        "exemploParagrafo": {
+          "type": "string",
+          "description": "Exemplo prático de parágrafo argumentativo ou introdutório aplicando este repertório.",
+          "minLength": 0,
+          "maxLength": 5000
+        },
+        "tags": {
+          "type": "array",
+          "description": "Lista de palavras-chave para classificação cruzada (máx 15 tags).",
+          "maxLength": 15
+        },
+        "imagemData": {
+          "type": "string",
+          "description": "Campo legado opcional de imagem.",
+          "minLength": 0,
+          "maxLength": 450000
+        },
+        "favorito": {
+          "type": "boolean",
+          "description": "Indica se o repertório está destacado como favorito."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp de criação no servidor."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp de última atualização no servidor."
+        }
+      },
+      "required": [
+        "ownerId",
+        "nome",
+        "titulo",
+        "autor",
+        "eixoTematico",
+        "tipoObra",
+        "resumo",
+        "tags",
+        "favorito",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "EditRequest": {
+      "title": "EditRequest",
+      "description": "Solicitação de permissão de edição enviada por um usuário ao proprietário de um repertório público.",
+      "type": "object",
+      "properties": {
+        "repertorioId": {
+          "type": "string",
+          "description": "ID do repertório alvo.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "repertorioNome": {
+          "type": "string",
+          "description": "Nome do repertório para exibição na notificação.",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "UID do proprietário do repertório que receberá a notificação.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "requesterId": {
+          "type": "string",
+          "description": "UID do usuário que está solicitando permissão de edição.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "requesterName": {
+          "type": "string",
+          "description": "Nome de exibição do solicitante.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "status": {
+          "type": "string",
+          "description": "Estado da solicitação: pending, accepted ou rejected.",
+          "enum": ["pending", "accepted", "rejected"]
+        },
+        "message": {
+          "type": "string",
+          "description": "Mensagem curta opcional justificando a solicitação.",
+          "minLength": 0,
+          "maxLength": 300
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp de envio da solicitação."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp de resposta da solicitação."
+        }
+      },
+      "required": [
+        "repertorioId",
+        "repertorioNome",
+        "ownerId",
+        "requesterId",
+        "requesterName",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/repertorios/{repertorioId}": {
+      "schema": {
+        "$ref": "#/entities/Repertorio"
+      },
+      "description": "Coleção principal de fichas de repertórios socioculturais (privadas ou públicas)."
+    },
+    "/editRequests/{requestId}": {
+      "schema": {
+        "$ref": "#/entities/EditRequest"
+      },
+      "description": "Coleção de solicitações de edição e notificações entre usuários."
+    }
+  }
+}
